@@ -1,4 +1,4 @@
-# aqua-backend
+# purify-backend
 
 Backend database and API
 
