@@ -11,4 +11,7 @@ RUN npm install
 # Bundle app source
 COPY . .
 EXPOSE 3004
-CMD [ "npm start" ]
+#RUN [ "npm", "i", "-D", "typescript", "ts-node" ]
+#RUN [ "npm", "run", "build" ]
+#RUN [ "npm", "start" ]
+CMD [ "./buildAndRun.sh" ]
