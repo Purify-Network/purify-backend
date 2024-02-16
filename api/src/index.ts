@@ -40,7 +40,7 @@ app.post('/new-test', async (req: Request, res: Response) => {
 });
 
 
-app.post('/new-user', async (req: Request, res: Response) => {
+/*app.post('/new-user', async (req: Request, res: Response) => {
   try {
     let username = req.body.ph;
     let pub_key = req.body.tds;
@@ -56,6 +56,7 @@ app.post('/new-user', async (req: Request, res: Response) => {
       return res.status(500).json({ error: 'Error updating scores.' });
   }
 });
+*/
 
 
 app.post('/signup', async (req: Request, res: Response) => {
@@ -72,7 +73,10 @@ app.post('/signup', async (req: Request, res: Response) => {
 
     const inserted = await sign_up(username, password, email, name, epoch_created).then(value => {return value;});
     if(inserted > 0){
-      return res.send({success: true});
+      const login_token = make_login_token(48);
+      let sql = `UPDATE users SET login_token='${login_token}' WHERE username='${username}';`;
+      const res2 = await client.query(sql);
+      return res.send({login_token: login_token});
     }else{
       return res.status(500).json({ error: 'Wrong sign up info, moron' });
     }
@@ -103,3 +107,15 @@ async function sign_up(username: string, password: string, email: string, name: 
   }
 }
 
+
+function make_login_token(length: number) {
+    let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const charactersLength = characters.length;
+    let counter = 0;
+    while (counter < length) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+      counter += 1;
+    }
+    return result;
+}
