@@ -27,6 +27,43 @@ app.get("/", (req: Request, res: Response) => {
 //TODO UPLOAD IMAGE METHOD
 
 
+app.get('/loc', async (req: Request, res: Response) => {
+  // TODO UPLOAD IMAGE AND SAVE FILE PATH TO PUSH HERE TO DB
+  try {
+    let locid = req.query.locid;
+    let sql = `SELECT * FROM water_locs (name, image_path, latitude, longitude, epoch_added)`;
+    const res = await client.query(sql);
+    return res.send(res.rows);
+    } catch (error) {
+      return res.status(500).json({ error: 'Error getting location' });
+  }
+});
+
+
+app.get('/stats', async (req: Request, res: Response) => {
+  try {
+    const username = req.query.username;
+    const res = await client.query("SELECT  FROM users WHERE pub_key='" + walletAddr + "';");
+    const games_played = res2.rows[0].games_played;
+    const high_score = res2.rows[0].high_score;
+    const total_score = res2.rows[0].total_score;
+    return res.send({ games_played: games_played, high_score: high_score, total_score: total_score});
+  } catch (error) {
+      return res.status(500).json({ error: 'Error getting player stats.' });
+  }
+});
+
+
+app.get('/leaderboard', async (req: Request, res: Response) => {
+  try {
+    const res2 = await client.query("SELECT username, high_score FROM speed_square ORDER BY high_score DESC;");
+    return res.send(res2.rows);
+  } catch (error) {
+      return res.status(500).json({ error: 'Error getting claim status.' });
+  }
+});
+
+
 app.post('/new-loc', async (req: Request, res: Response) => {
   // TODO UPLOAD IMAGE AND SAVE FILE PATH TO PUSH HERE TO DB
   try {
@@ -38,7 +75,7 @@ app.post('/new-loc', async (req: Request, res: Response) => {
 
     let sql = `INSERT INTO water_locs (name, image_path, latitude, longitude, epoch_added) VALUES '${name}', '${image_path}', ${lat}, ${lng}, ${epoch};`;
     const res = await client.query(sql);
-
+    return res.send({success: "success"});
     } catch (error) {
       return res.status(500).json({ error: 'Error adding new location' });
   }
@@ -57,8 +94,8 @@ app.post('/new-test', async (req: Request, res: Response) => {
     
     let sql = `INSERT INTO water_tests (user_id, loc_id, temperature, ph, tds, epoch) VALUES ${userid}, ${locid}, ${temp}, ${ph}, ${tds}, ${epoch};`;
     const res = await client.query(sql);
-
-    } catch (error) {
+    return res.send({success: "success"});
+  } catch (error) {
       return res.status(500).json({ error: 'Error updating scores.' });
   }
 });
