@@ -31,9 +31,9 @@ app.get('/loc', async (req: Request, res: Response) => {
   // TODO UPLOAD IMAGE AND SAVE FILE PATH TO PUSH HERE TO DB
   try {
     let locid = req.query.locid;
-    let sql = `SELECT * FROM water_locs (name, image_path, latitude, longitude, epoch_added)`;
-    const res = await client.query(sql);
-    return res.send(res.rows);
+    let sql = `SELECT * FROM water_locs WHERE id=${locid};`;
+    const res2 = await client.query(sql);
+    return res2.send(res2.rows);
     } catch (error) {
       return res.status(500).json({ error: 'Error getting location' });
   }
@@ -43,11 +43,12 @@ app.get('/loc', async (req: Request, res: Response) => {
 app.get('/stats', async (req: Request, res: Response) => {
   try {
     const username = req.query.username;
-    const res = await client.query("SELECT  FROM users WHERE pub_key='" + walletAddr + "';");
-    const games_played = res2.rows[0].games_played;
-    const high_score = res2.rows[0].high_score;
-    const total_score = res2.rows[0].total_score;
-    return res.send({ games_played: games_played, high_score: high_score, total_score: total_score});
+    const res2 = await client.query(`SELECT tests_made, locs_added, points, unique_locs_tested FROM users WHERE username='${username}';`);
+    const tests_made = res2.rows[0].tests_made;
+    const locs_added = res2.rows[0].locs_added;
+    const points = res2.rows[0].points;
+    const unique_locs_tested = res2.rows[0].unique_locs_tested;
+    return res.send({tests_made: tests_made, locs_added: locs_added, points: points, unique_locs_tested: unique_locs_tested});
   } catch (error) {
       return res.status(500).json({ error: 'Error getting player stats.' });
   }
@@ -56,10 +57,33 @@ app.get('/stats', async (req: Request, res: Response) => {
 
 app.get('/leaderboard', async (req: Request, res: Response) => {
   try {
-    const res2 = await client.query("SELECT username, high_score FROM speed_square ORDER BY high_score DESC;");
+    const res2 = await client.query("SELECT points, username FROM users ORDER BY points DESC;");
     return res.send(res2.rows);
   } catch (error) {
-      return res.status(500).json({ error: 'Error getting claim status.' });
+      return res.status(500).json({ error: 'Error getting leaderboard' });
+  }
+});
+
+
+app.get('/locs-near-me', async (req: Request, res: Response) => {
+  try {
+    const radius = req.query.radius;
+    console.log(radius);
+    const lat = req.query.lat;
+    console.log(lat);
+    const lng = req.query.lng;
+    console.log(lng);
+    const maxLng = Number(lng) + Number(radius);
+    const minLng = lng - radius;
+    const maxLat = Number(lat) + Number(radius);
+    const minLat = lat - radius;
+    console.log(minLat);
+    const sql = `SELECT id, latitude, longitude, name FROM water_locs WHERE latitude<${maxLat} AND latitude>${minLat} AND longitude<${maxLng} AND longitude>${minLng};`;
+    const res2 = await client.query(sql);
+    console.log(sql);
+    return res.send(res2.rows);
+  } catch (error) {
+      return res.status(500).json({ error: 'Error getting nearby locs' });
   }
 });
 
@@ -111,9 +135,10 @@ app.post('/signup', async (req: Request, res: Response) => {
     const username = req.body.username; //json.username;
     const password = req.body.password; //json.password;
     const email = req.body.email; //json.email;
-    const name = req.body.name;
+    const name = "temp"; //req.body.name;
+    const invited_by = req.body.invitedBy;
 
-    const inserted = await sign_up(username, password, email, name, epoch_created).then(value => {return value;});
+    const inserted = await sign_up(username, password, email, name, epoch_created, invited_by).then(value => {return value;});
     if(inserted > 0){
       return res.send({success: "success"});
     }else{
@@ -128,17 +153,22 @@ app.post('/signup', async (req: Request, res: Response) => {
 
 app.post('/login', async (req: Request, res: Response) => {
   try {
-    const epoch = 0;//req.body.epoch_created;
+	  console.log("here");
+    const epoch = new Date().valueOf()/1000;//req.body.epoch_created;
     //let x = encrypt.decryptLoginDataAES(epoch, msg);
     //let json = JSON.parse(x);
     const username = req.body.username; //json.username;
     const password = req.body.password; //json.password;
+console.log(username);
 
     const loginMatch = await login(username, password).then(value => {return value;});
     if(loginMatch == 1){
+	    console.log("1");
       const login_token = make_login_token(48);
-      let sql = `UPDATE users SET login_token='${login_token}', epoch=${epoch} WHERE username='${username}';`;
+      let sql = `UPDATE users SET login_token='${login_token}', epoch_last_login=${epoch} WHERE username='${username}';`;
+      console.log(epoch);
       const res2 = await client.query(sql);
+      console.log("2");
       return res.send({login_token: login_token});
     }else{
       return res.status(500).json({ error: 'Wrong login info, moron' });
@@ -158,9 +188,9 @@ app.listen(port, () => {
 
 
 
-async function sign_up(username: string, password: string, email: string, name: string, epoch_created: number): Promise<number> {
+async function sign_up(username: string, password: string, email: string, name: string, epoch_created: number, invited_by: string): Promise<number> {
     try {
-    let sql = `INSERT INTO users (email, username, password, name, epoch_created, login_token) SELECT '${email}', '${username}', '${password}', '${name}', ${epoch_created}, '' WHERE NOT EXISTS (SELECT username FROM users WHERE username='${username}');`;
+    let sql = `INSERT INTO users (email, username, password, name, login_token, invited_by, points) SELECT '${email}', '${username}', '${password}', '${name}', '', '${invited_by ? invited_by : ""}', ${invited_by ? 50 : 0}  WHERE NOT EXISTS (SELECT username FROM users WHERE username='${username}');`;
     const res = await client.query(sql);
     return res.rowCount || -1;
     }catch (error) {
