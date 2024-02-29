@@ -65,6 +65,39 @@ app.get('/leaderboard', async (req: Request, res: Response) => {
 });
 
 
+app.get('/total-tests', async (req: Request, res: Response) => {
+  try {
+    const res2 = await client.query("SELECT COUNT(id) FROM water_tests;");
+    console.log(res2.rows);
+    return res.send(res2.rows[0]);
+  } catch (error) {
+      return res.status(500).json({ error: 'Error getting leaderboard' });
+  }
+});
+
+
+app.get('/total-locs', async (req: Request, res: Response) => {
+  try {
+    const res2 = await client.query("SELECT COUNT(id) FROM water_locs;");
+    console.log(res2.rows);
+    return res.send(res2.rows[0]);
+  } catch (error) {
+      return res.status(500).json({ error: 'Error getting leaderboard' });
+  }
+});
+
+
+app.get('/total-users', async (req: Request, res: Response) => {
+  try {
+    const res2 = await client.query("SELECT COUNT(username) FROM users;");
+    console.log(res2.rows);
+    return res.send(res2.rows[0]);
+  } catch (error) {
+      return res.status(500).json({ error: 'Error getting leaderboard' });
+  }
+});
+
+
 app.get('/locs-near-me', async (req: Request, res: Response) => {
   try {
     const radius = req.query.radius;
