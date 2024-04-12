@@ -10,7 +10,7 @@ RUN npm install
 # RUN npm ci --omit=dev
 # Bundle app source
 COPY . .
-EXPOSE 3004
+EXPOSE 3000
 #RUN [ "npm", "i", "-D", "typescript", "ts-node" ]
 #RUN [ "npm", "run", "build" ]
 #RUN [ "npm", "start" ]

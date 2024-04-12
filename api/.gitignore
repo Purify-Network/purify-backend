@@ -1,3 +1,15 @@
 .env
 node_modules
 dist
+
+DO_cert.cer
+DO_private.key
+cert.pem
+iii.txt
+key.pem
+keytmp.pem
+kll.txt
+src/cert.pem
+src/iii.txt
+src/key.pem
+src/public/

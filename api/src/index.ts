@@ -2,6 +2,11 @@
 import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
 import { Client } from 'pg';
+//import { https } from 'https';
+//import { fs } from 'fs';
+import * as fs from 'fs';
+import * as https from 'https';
+import multer from 'multer';
 
 dotenv.config();
 
@@ -15,9 +20,26 @@ const client = new Client(
 );
 client.connect();
 
+
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'public/uploads/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.originalname);
+  }
+});
+const imageUpload = multer({ storage: storage });
+
+
+
 const app: Express = express();
 const port = process.env.PORT || 3000;
 app.use(express.json());
+app.use(express.static('./public'));
+//app.use("/uploads", express.static('.././uploads'));
+
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Express + TypeScript Server");
@@ -25,6 +47,17 @@ app.get("/", (req: Request, res: Response) => {
 
 
 //TODO UPLOAD IMAGE METHOD
+//app.post('/upload-image', async (req: Request, res: Response) => {
+app.post('/upload-image', imageUpload.single("image12"), (req, res) => {
+  console.log(req.body);
+  console.log(req.body.hello);
+  console.log(req.files);
+  console.log(req.body.name);
+  console.log('POST request received to /image-upload.');
+  console.log('Axios POST body: ', req);
+  res.send('POST request recieved on server to /image-upload.');
+})
+
 
 
 app.get('/loc', async (req: Request, res: Response) => {
@@ -33,7 +66,7 @@ app.get('/loc', async (req: Request, res: Response) => {
     let locid = req.query.locid;
     let sql = `SELECT * FROM water_locs WHERE id=${locid};`;
     const res2 = await client.query(sql);
-    return res2.send(res2.rows);
+    return res.send(res2.rows);
     } catch (error) {
       return res.status(500).json({ error: 'Error getting location' });
   }
@@ -111,7 +144,7 @@ app.get('/locs-near-me', async (req: Request, res: Response) => {
     const maxLat = Number(lat) + Number(radius);
     const minLat = lat - radius;
     console.log(minLat);
-    const sql = `SELECT id, latitude, longitude, name FROM water_locs WHERE latitude<${maxLat} AND latitude>${minLat} AND longitude<${maxLng} AND longitude>${minLng};`;
+    const sql = `SELECT id, latitude, longitude, name, image_path FROM water_locs WHERE latitude<${maxLat} AND latitude>${minLat} AND longitude<${maxLng} AND longitude>${minLng};`;
     const res2 = await client.query(sql);
     console.log(sql);
     return res.send(res2.rows);
@@ -130,10 +163,11 @@ app.post('/new-loc', async (req: Request, res: Response) => {
     let lng = req.body.longitude;
     let epoch = req.body.epoch;
 
-    let sql = `INSERT INTO water_locs (name, image_path, latitude, longitude, epoch_added) VALUES '${name}', '${image_path}', ${lat}, ${lng}, ${epoch};`;
-    const res = await client.query(sql);
+    let sql = `INSERT INTO water_locs (name, image_path, latitude, longitude, epoch_added) VALUES ('${name}', '${image_path}', ${lat}, ${lng}, ${epoch});`;
+    const res2 = await client.query(sql);
     return res.send({success: "success"});
     } catch (error) {
+      console.log(error);
       return res.status(500).json({ error: 'Error adding new location' });
   }
 });
@@ -150,7 +184,7 @@ app.post('/new-test', async (req: Request, res: Response) => {
     let epoch = req.body.epoch;
     
     let sql = `INSERT INTO water_tests (user_id, loc_id, temperature, ph, tds, epoch) VALUES ${userid}, ${locid}, ${temp}, ${ph}, ${tds}, ${epoch};`;
-    const res = await client.query(sql);
+    const res2 = await client.query(sql);
     return res.send({success: "success"});
   } catch (error) {
       return res.status(500).json({ error: 'Error updating scores.' });
@@ -187,13 +221,16 @@ app.post('/signup', async (req: Request, res: Response) => {
 app.post('/login', async (req: Request, res: Response) => {
   try {
 	  console.log("here");
+	console.log(req);
+	  console.log(req.body);
+	  console.log(req.body.username);
     const epoch = new Date().valueOf()/1000;//req.body.epoch_created;
     //let x = encrypt.decryptLoginDataAES(epoch, msg);
     //let json = JSON.parse(x);
     const username = req.body.username; //json.username;
     const password = req.body.password; //json.password;
 console.log(username);
-
+console.log(req.body);
     const loginMatch = await login(username, password).then(value => {return value;});
     if(loginMatch == 1){
 	    console.log("1");
@@ -208,17 +245,33 @@ console.log(username);
     }
   } catch (error) {
           console.log(error);
-      return res.status(500).json({ error: 'Error signing up.' });
+      return res.status(500).json({ error: 'Error logging in' });
   }
 });
 
 
 //app.use(express.static(__dirname + '/public'));
 
-app.listen(port, () => {
+/*
+
+var privateKey = fs.readFileSync( './key.pem' );
+var certificate = fs.readFileSync( './cert.pem' );
+
+https.createServer({
+    key: privateKey,
+    cert: certificate
+}, app).listen(port, () => {
   console.log(`[server]: Server is running at http://localhost:${port}`);
 });
+*/
 
+const httpsOptions = {
+  key: fs.readFileSync('./DO_private.key'),
+  cert: fs.readFileSync('./DO_cert.cer')
+}
+const server = https.createServer(httpsOptions, app).listen(port, () => {
+  console.log('server running at ' + port)
+})
 
 
 async function sign_up(username: string, password: string, email: string, name: string, epoch_created: number, invited_by: string): Promise<number> {
